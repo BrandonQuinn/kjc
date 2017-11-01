@@ -23,8 +23,13 @@ using namespace std;
 
 bool compiler::useLibraries = true;
 std::vector<std::string> compiler::libFiles;
+std::vector<std::string> compiler::srcFiles;
 
-bool compiler::c_IsSourceFile(
+/*=========================================================
+ * SOURCE FILES
+ =========================================================*/
+
+bool compiler::IsSourceFile(
 		char* fileStr
 ) {
 	char newStr[MAX_STR_LEN]; strcpy(newStr, fileStr);
@@ -40,27 +45,8 @@ bool compiler::c_IsSourceFile(
 	return false;
 }
 
-bool compiler::c_IsLibraryFile(
-		char* fileStr
-) {
-	char newStr[MAX_STR_LEN]; strcpy(newStr, fileStr);
-	char* tok = strtok(newStr, ".");
-	while(tok != NULL) {
-		// kotlin or java file?
-		if (strcmp(tok, JAVALIB_EXT) == 0
-			|| strcmp(tok, WIN_DYN_LIB) == 0
-			|| strcmp(tok, NIX_DYN_LIB) == 0
-			|| strcmp(tok, MAC_DYN_LIB) == 0) {
-			return true;
-		}
-		tok = strtok(NULL, ".");
-	}
-	return false;
-}
-
-void compiler::c_RecursiveSearchSource(
+void compiler::RecursiveSearchSource(
 		const char* src,
-		vector<string>* files,
 		vector<string>* dirs,
 		queue<string>* queue
 ) {
@@ -91,13 +77,13 @@ void compiler::c_RecursiveSearchSource(
 						string(newStr).length());
 				dirs->push_back(result.c_str());
 				// recurse
-				compiler::c_RecursiveSearchSource(src, files, dirs, queue);
-			} else if (S_ISREG(statPath.st_mode) && c_IsSourceFile(newStr)) { // file
+				RecursiveSearchSource(src, dirs, queue);
+			} else if (S_ISREG(statPath.st_mode) && IsSourceFile(newStr)) { // file
 				// get the filename relative to the src path
 				string result = string(newStr).substr(string(src).length() + 1,
 						string(newStr).length());
 				// add to list
-				files->push_back(result.c_str());
+				compiler::srcFiles.push_back(result.c_str());
 			}
 		}
 		closedir (dir);
@@ -106,20 +92,18 @@ void compiler::c_RecursiveSearchSource(
 	}
 }
 
-void compiler::c_GetSourceFiles(
+void compiler::GetSourceFiles (
 		const char* src,
-		vector<string>* files,
 		vector<string>* dirs
 ) {
-	vector<string>* fs = files;
 	vector<string>* ds = dirs;
 	queue<string>* dirQueue = new queue<string>;
 	dirQueue->push(string(src));
-	compiler::c_RecursiveSearchSource(src, fs, ds, dirQueue);
+	RecursiveSearchSource(src, ds, dirQueue);
 	delete dirQueue;
 }
 
-bool compiler::c_IsKotlinFile(
+bool compiler::IsKotlinFile (
 		const char* file
 ) {
 	char newStr[MAX_STR_LEN]; strcpy(newStr, file);
@@ -132,7 +116,7 @@ bool compiler::c_IsKotlinFile(
 	return false;
 }
 
-bool compiler::c_IsJavaFile(
+bool compiler::IsJavaFile (
 		const char* file
 ) {
 	char newStr[MAX_STR_LEN]; strcpy(newStr, file);
@@ -145,7 +129,7 @@ bool compiler::c_IsJavaFile(
 	return false;
 }
 
-void compiler::c_CopyDirs(
+void compiler::CopyDirs (
 		vector<string> directories,
 		const char* src,
 		const char* dest
@@ -176,8 +160,29 @@ void compiler::c_CopyDirs(
 	printf("Directories done.\n");
 }
 
-void compiler::c_CopyFilesR(
-		vector<string> libFiles,
+/*=========================================================
+ * LIBRARY FILES
+ =========================================================*/
+
+bool compiler::IsLibraryFile(
+		char* fileStr
+) {
+	char newStr[MAX_STR_LEN]; strcpy(newStr, fileStr);
+	char* tok = strtok(newStr, ".");
+	while(tok != NULL) {
+		// kotlin or java file?
+		if (strcmp(tok, JAVALIB_EXT) == 0
+			|| strcmp(tok, WIN_DYN_LIB) == 0
+			|| strcmp(tok, NIX_DYN_LIB) == 0
+			|| strcmp(tok, MAC_DYN_LIB) == 0) {
+			return true;
+		}
+		tok = strtok(NULL, ".");
+	}
+	return false;
+}
+
+void compiler::CopyLibraryFiles (
 		const char* src,
 		const char* dest
 ) {
@@ -194,9 +199,8 @@ void compiler::c_CopyFilesR(
 	}
 }
 
-void compiler::c_RecursiveLibrarySearch(
+void compiler::RecursiveLibrarySearch (
 		const char* src,
-		vector<string>* files,
 		queue<string>* queue
 ) {
 	string current = queue->front();
@@ -222,12 +226,12 @@ void compiler::c_RecursiveLibrarySearch(
 					&& S_ISDIR(statPath.st_mode)) {
 				queue->push(string(newStr));
 				// recurse
-				compiler::c_RecursiveLibrarySearch(src, files, queue);
-			} else if (S_ISREG(statPath.st_mode) && c_IsLibraryFile(newStr)) { // file
+				RecursiveLibrarySearch(src, queue);
+			} else if (S_ISREG(statPath.st_mode) && IsLibraryFile(newStr)) { // file
 				// get the filename relative to the src path
 				string result = string(newStr);
 				// add to list
-				files->push_back(result.c_str());
+				libFiles.push_back(result.c_str());
 			}
 		}
 		closedir (dir);
@@ -236,27 +240,30 @@ void compiler::c_RecursiveLibrarySearch(
 	}
 }
 
-void compiler::c_GetLibraryFiles(
-		const char* src,
-		vector<string>* libFiles
+void compiler::GetLibraryFiles (
+		const char* src
 ) {
 	queue<string>* dirQueue = new queue<string>;
 	dirQueue->push(string(src));
-	compiler::c_RecursiveLibrarySearch(src, libFiles, dirQueue);
+	RecursiveLibrarySearch(src, dirQueue);
 	delete dirQueue;
 }
 
-void compiler::c_CopyLibraries(
+void compiler::CopyLibraries (
 		const char* src,
 		const char* dest
 ) {
-	compiler::useLibraries = true;
+	useLibraries = true;
 	system((string("mkdir ") + string(dest)).c_str());
-	compiler::c_GetLibraryFiles(src, &compiler::libFiles);
-	compiler::c_CopyFilesR(compiler::libFiles, src, dest);
+	GetLibraryFiles(src);
+	CopyLibraryFiles(src, dest);
 }
 
-void compiler::c_CompileSourceToClassFiles(
+/*=========================================================
+ * COMPILE FUNCTIONS
+ =========================================================*/
+
+void compiler::CompileSourceToClassFiles (
 		const char* src,
 		const char* dest
 ) {
@@ -275,7 +282,7 @@ void compiler::c_CompileSourceToClassFiles(
 
 	// Kotlin doesn't like wildcards... yet
 	if (compiler::useLibraries) {
-		kotlinCommand += string(" -cp \"");
+		kotlinCommand += string(" -cp \".;");
 		for (unsigned int i = 0; i < compiler::libFiles.size(); i++) {
 			kotlinCommand += string(compiler::libFiles.at(i)) + ";";
 		}
@@ -283,22 +290,30 @@ void compiler::c_CompileSourceToClassFiles(
 	}
 
 	printf("Searching for Java and Kotlin source files...\n");
-	compiler::c_GetSourceFiles(src, &srcFiles, &directories);
+	GetSourceFiles(src, &directories);
 
 	bool hasKotlin = false;
 	bool hasJava = false;
-	for (unsigned int i = 0; i < srcFiles.size(); i++) {
-		if (compiler::c_IsKotlinFile(srcFiles.at(i).c_str())) {
+	for (unsigned int i = 0; i < compiler::srcFiles.size(); i++) {
+		if (IsKotlinFile(compiler::srcFiles.at(i).c_str())) {
 			hasKotlin = true;
-			kotlinCommand += srcFiles.at(i) + " ";
-		} else if (compiler::c_IsJavaFile(srcFiles.at(i).c_str())) {
+			kotlinCommand += compiler::srcFiles.at(i) + " ";
+		} else if (IsJavaFile(compiler::srcFiles.at(i).c_str())) {
 			hasJava = true;
-			javaCommand += srcFiles.at(i) + " ";
+			javaCommand += compiler::srcFiles.at(i) + " ";
 		}
 	}
 
 	// copy files from src to dest
-	compiler::c_CopyDirs(directories, src, dest);
+	CopyDirs(directories, src, dest);
+
+	if (hasJava) {
+		printf("Compilng Java source...\n");
+		system(javaCommand.c_str());
+		printf("Java compilation done.\n");
+	} else {
+		printf("No Java source found.\n");
+	}
 
 	if (hasKotlin) {
 		printf("Compilng Kotlin source...\n");
@@ -310,14 +325,6 @@ void compiler::c_CompileSourceToClassFiles(
 
 	printf("Source search done.\n");
 
-	if (hasJava) {
-		printf("Compilng Java source...\n");
-		system(javaCommand.c_str());
-		printf("Java compilation done.\n");
-	} else {
-		printf("No Java source found.\n");
-	}
-
 	if (!hasJava && !hasKotlin) {
 		printf("ERROR: No source files found of either type.\n");
 		exit(EXIT_FAILURE);
@@ -328,7 +335,7 @@ void compiler::c_CompileSourceToClassFiles(
 			((float)startTime) / CLOCKS_PER_SEC);
 }
 
-void compiler::c_CompileSourceToJar(
+void compiler::CompileSourceToJar(
 		const char* src,
 		const char* dest,
 		const char* mainClass

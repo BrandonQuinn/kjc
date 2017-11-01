@@ -33,13 +33,14 @@ class compiler
 		 */
 		static bool useLibraries;
 		static std::vector<std::string> libFiles;
+		static std::vector<std::string> srcFiles;
 
 		/*
 		 * Compiles the source kotlin and java files into
 		 * class files in the same package structure from the src
 		 * directly to the destination.
 		 */
-		static void c_CompileSourceToClassFiles(
+		static void CompileSourceToClassFiles(
 				const char* src,
 				const char* dest
 		);
@@ -50,7 +51,7 @@ class compiler
 		 * the left over class and source files, ONLY IN THE DESTINATION,
 		 * THE SOURCE DIRECTORY IS UNTOUCHED!
 		 */
-		static void c_CompileSourceToJar(
+		static void CompileSourceToJar(
 				const char* src,
 				const char* dest,
 				const char* mainClass
@@ -59,9 +60,8 @@ class compiler
 		/*
 		 *Gets all the source files, Java or Kotlin from the given directory.
 		 */
-		static void c_GetSourceFiles(
+		static void GetSourceFiles(
 				const char* src,
-				std::vector<std::string>* files,
 				std::vector<std::string>* dirs
 		);
 
@@ -71,7 +71,7 @@ class compiler
 		 * Ignores directory structure and copies all files found recursively
 		 * in to the destination.
 		 */
-		static void c_CopyLibraries(
+		static void CopyLibraries(
 				const char* src,
 				const char* dest
 		);
@@ -79,60 +79,56 @@ class compiler
 		/*
 		 * Is the given file path a library file?
 		 */
-		static bool c_IsLibraryFile(
+		static bool IsLibraryFile(
 				char* fileStr
 		);
 
 		/*
 		 * Is the given file name a source file? Java or Kotlin?
 		 */
-		static bool c_IsSourceFile(
+		static bool IsSourceFile(
 				char* fileStr
 		);
 
 		/*
 		 * Is the given file a Kotlin source file?
 		 */
-		static bool c_IsKotlinFile(
+		static bool IsKotlinFile(
 				const char* file
 		);
 
 		/*
 		 * Is the given file a Java source file?
 		 */
-		static bool c_IsJavaFile(
+		static bool IsJavaFile(
 				const char* file
 		);
 
 	private:
-		static void c_RecursiveSearchSource(
+		static void RecursiveSearchSource(
 				const char* src,
-				std::vector<std::string>* files,
 				std::vector<std::string>* dirs,
 				std::queue<std::string>* queue
 		);
 
-		static void c_RecursiveLibrarySearch(
+		static void RecursiveLibrarySearch(
 				const char* src,
-				std::vector<std::string>* files,
 				std::queue<std::string>* queue
 		);
 
-		static void c_CopyDirs(
+		static void CopyDirs(
 				std::vector<std::string> directories,
 				const char* src,
 				const char* dest
 		);
 
-		static void c_CopyFilesR(
-				std::vector<std::string> libFiles,
+		static void CopyLibraryFiles(
 				const char* src,
 				const char* dest
 		);
 
-		static void c_GetLibraryFiles(
-				const char* src,
-				std::vector<std::string>* libFiles
+		static void GetLibraryFiles(
+				const char* src
 		);
 };
 

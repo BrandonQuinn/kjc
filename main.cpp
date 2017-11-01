@@ -30,11 +30,11 @@ int main(
 		if (lib) {
 			vector<string> libArg = cmdline.GetArgs("lib");
 			printf("Copying library files from '%s'...\n", libArg[0].c_str());
-			compiler::c_CopyLibraries(libArg[0].c_str(), destArg[0].c_str());
+			compiler::CopyLibraries(libArg[0].c_str(), destArg[0].c_str());
 			printf("Library files copied.\n");
 		}
 
-		compiler::c_CompileSourceToClassFiles(
+		compiler::CompileSourceToClassFiles(
 				srcArg[0].c_str(),
 				destArg[0].c_str()
 		);
@@ -44,7 +44,7 @@ int main(
 		vector<string> destArg = cmdline.GetArgs("d");
 		vector<string> mcArg = cmdline.GetArgs("mc");
 
-		compiler::c_CompileSourceToJar(
+		compiler::CompileSourceToJar(
 				srcArg[0].c_str(),
 				destArg[0].c_str(),
 				mcArg[0].c_str()
