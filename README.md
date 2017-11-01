@@ -9,7 +9,7 @@ Here what it does currently: take in options -s, -d and -lib each with 1 argumen
 
 * -s is the source directory, where the source files are.
 * -d is the output directory, where everything will be compiled.
-* -lib is a directory with all the libraries in it.
+* -lib (optional) is a directory with all the libraries in it.
 
 Now, it needs some work but the lib option essentially ignores directories and copies every file it finds with the .jar, .so, .dll or .dylib extension the the output directory marked with the -d option.
 
@@ -19,3 +19,5 @@ Then to run, you would use `java -cp ".;*" com.whatever.Main` in the output dire
 
 Currently the source files do not get deleted which I want to do.
 I also need to add runnable jar support.
+
+DISCLAIMER: THIS IS NOT FOR PRODUCTION USE AND CONTAINS SECURITY VULNERABILITIES (SYSTEM CALLS).
